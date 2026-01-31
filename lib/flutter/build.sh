@@ -1,8 +1,8 @@
 #!/bin/bash
-# krinry-flutter - Build APK Command
+# krinry flutter - Build APK Command
 
 cmd_build_apk() {
-    local build_type="release"
+    local build_type="debug"  # Default to debug
     
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -15,9 +15,17 @@ cmd_build_apk() {
                 build_type="debug"
                 shift
                 ;;
+            --split)
+                build_type="split"
+                shift
+                ;;
+            --help|-h)
+                show_build_help
+                exit 0
+                ;;
             *)
                 print_error "Unknown option: $1"
-                echo "Usage: krinry-flutter build apk [--release|--debug]"
+                show_build_help
                 exit 1
                 ;;
         esac
@@ -25,7 +33,7 @@ cmd_build_apk() {
     
     print_header "Build APK (${build_type})"
     
-    # Validate environment
+    # Validate environment (with detailed errors)
     validate_build_environment
     
     # Check for uncommitted changes
@@ -46,8 +54,14 @@ cmd_build_apk() {
     
     # Push latest changes
     print_step "Pushing to GitHub..."
-    if ! git push 2>/dev/null; then
-        print_warning "Failed to push. You may need to push manually."
+    local push_output
+    push_output=$(git push 2>&1)
+    if [[ $? -ne 0 ]]; then
+        print_warning "Failed to push changes"
+        echo "$push_output"
+        echo ""
+        echo "Please resolve this and try again."
+        exit 1
     else
         print_success "Pushed to GitHub"
     fi
@@ -60,12 +74,30 @@ cmd_build_apk() {
     repo_name=$(get_repo_name)
     
     if [[ -z "$repo_owner" || -z "$repo_name" ]]; then
-        die "Could not determine repository owner/name from remote URL"
+        print_error "Could not determine repository owner/name from remote URL"
+        echo ""
+        echo "Your remote URL: $(get_remote_url)"
+        echo ""
+        echo "Make sure it's a valid GitHub URL like:"
+        echo "  https://github.com/username/repo.git"
+        echo "  git@github.com:username/repo.git"
+        exit 1
     fi
     
     # Trigger the workflow
-    if ! gh workflow run krinry-build.yml -f build_type="${build_type}" 2>/dev/null; then
-        die "Failed to trigger workflow. Make sure you've pushed the workflow file."
+    local trigger_output
+    trigger_output=$(gh workflow run krinry-build.yml -f build_type="${build_type}" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        print_error "Failed to trigger workflow"
+        echo ""
+        echo "$trigger_output"
+        echo ""
+        echo "Possible solutions:"
+        echo "  1. Make sure workflow file exists: .github/workflows/krinry-build.yml"
+        echo "  2. Push the workflow: git push"
+        echo "  3. Check GitHub authentication: gh auth status"
+        echo "  4. Re-run init: krinry flutter init"
+        exit 1
     fi
     
     print_success "Build triggered!"
@@ -81,7 +113,11 @@ cmd_build_apk() {
     run_id=$(gh run list --workflow=krinry-build.yml --limit=1 --json databaseId -q '.[0].databaseId' 2>/dev/null)
     
     if [[ -z "$run_id" ]]; then
-        die "Could not find the triggered workflow run"
+        print_error "Could not find the triggered workflow run"
+        echo ""
+        echo "View your workflows at:"
+        echo "  https://github.com/${repo_owner}/${repo_name}/actions"
+        exit 1
     fi
     
     echo "Run ID: ${run_id}"
@@ -92,37 +128,108 @@ cmd_build_apk() {
     poll_build_status "$run_id" "$repo_owner" "$repo_name" "$build_type"
 }
 
+show_build_help() {
+    echo ""
+    echo "Usage: krinry flutter build apk [OPTIONS]"
+    echo ""
+    echo "Build APK using GitHub Actions cloud build."
+    echo ""
+    echo "OPTIONS:"
+    echo "  --debug     Build debug APK (default)"
+    echo "  --release   Build release APK"
+    echo "  --split     Build release APKs split by ABI (smaller size)"
+    echo "  --help      Show this help"
+    echo ""
+    echo "EXAMPLES:"
+    echo "  krinry flutter build apk              # Debug build"
+    echo "  krinry flutter build apk --release    # Release build"
+    echo "  krinry flutter build apk --split      # Split by ABI"
+    echo ""
+}
+
 validate_build_environment() {
+    echo ""
+    print_step "Validating environment..."
+    echo ""
+    
+    local has_error=false
+    
     # Check Flutter project
     if ! is_flutter_project; then
-        die "Not a Flutter project. Please run this in a Flutter project directory."
+        print_error "Not a Flutter project"
+        echo "  → Make sure you're in a Flutter project directory (with pubspec.yaml)"
+        has_error=true
+    else
+        print_success "Flutter project detected"
     fi
     
     # Check git repo
     if ! is_git_repo; then
-        die "Not a git repository. Run 'git init' first."
+        print_error "Not a git repository"
+        echo "  → Run: git init"
+        has_error=true
+    else
+        print_success "Git repository detected"
     fi
     
     # Check GitHub remote
     local remote_url
     remote_url=$(get_remote_url)
     if [[ -z "$remote_url" ]]; then
-        die "No GitHub remote. Run 'git remote add origin <url>' first."
+        print_error "No GitHub remote configured"
+        echo "  → Run: git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git"
+        has_error=true
+    else
+        print_success "Remote: ${remote_url}"
     fi
     
     # Check workflow file
     if ! has_workflow_file; then
-        die "No workflow file found. Run 'krinry-flutter init' first."
+        print_error "No workflow file found"
+        echo "  → Run: krinry flutter init"
+        has_error=true
+    else
+        print_success "Workflow file exists"
     fi
     
-    # Check gh auth
-    if ! gh auth status &>/dev/null; then
-        die "Not logged into GitHub CLI. Run 'gh auth login' first."
+    # Check gh installed
+    if ! is_command_available gh; then
+        print_error "GitHub CLI not installed"
+        echo "  → Install: pkg install gh"
+        has_error=true
+    else
+        # Check gh auth
+        local auth_status
+        auth_status=$(gh auth status 2>&1)
+        if [[ $? -ne 0 ]]; then
+            print_error "Not logged into GitHub CLI"
+            echo "  → Run: gh auth login"
+            echo ""
+            echo "  Quick setup:"
+            echo "    1. Run: gh auth login"
+            echo "    2. Choose: GitHub.com"
+            echo "    3. Choose: HTTPS"
+            echo "    4. Choose: Login with a web browser"
+            echo "    5. Copy the code and open the URL"
+            has_error=true
+        else
+            print_success "GitHub authenticated"
+        fi
     fi
     
     # Check internet
     if ! check_internet; then
-        die "No internet connection"
+        print_error "No internet connection"
+        has_error=true
+    else
+        print_success "Internet connection OK"
+    fi
+    
+    echo ""
+    
+    if [[ "$has_error" == "true" ]]; then
+        print_error "Please fix the above issues and try again"
+        exit 1
     fi
     
     print_success "Environment validated"
@@ -208,30 +315,34 @@ download_artifact() {
     print_step "Downloading artifact..."
     
     # Download the artifact
-    if gh run download "$run_id" -n "apk-${build_type}" -D "$output_dir" 2>/dev/null; then
-        # Find the downloaded APK
-        local apk_file
-        apk_file=$(find "$output_dir" -name "*.apk" -type f | head -1)
+    local download_output
+    download_output=$(gh run download "$run_id" -n "apk-${build_type}" -D "$output_dir" 2>&1)
+    if [[ $? -eq 0 ]]; then
+        # Find the downloaded APKs
+        local apk_files
+        apk_files=$(find "$output_dir" -name "*.apk" -type f 2>/dev/null)
         
-        if [[ -n "$apk_file" ]]; then
-            print_success "APK downloaded!"
+        if [[ -n "$apk_files" ]]; then
+            print_success "APK(s) downloaded!"
             echo ""
-            echo "📦 APK Location:"
-            echo "   ${apk_file}"
-            echo ""
+            echo "📦 APK Location(s):"
             
-            # Get file size
-            local size
-            if is_command_available stat; then
-                size=$(stat -f%z "$apk_file" 2>/dev/null || stat -c%s "$apk_file" 2>/dev/null)
-                if [[ -n "$size" ]]; then
-                    local size_mb
-                    size_mb=$(echo "scale=2; $size / 1048576" | bc 2>/dev/null || echo "")
-                    if [[ -n "$size_mb" ]]; then
-                        echo "   Size: ${size_mb} MB"
+            while IFS= read -r apk_file; do
+                echo "   ${apk_file}"
+                
+                # Get file size
+                local size
+                if is_command_available stat; then
+                    size=$(stat -c%s "$apk_file" 2>/dev/null || stat -f%z "$apk_file" 2>/dev/null)
+                    if [[ -n "$size" ]]; then
+                        local size_mb
+                        size_mb=$(awk "BEGIN {printf \"%.2f\", $size / 1048576}" 2>/dev/null)
+                        if [[ -n "$size_mb" ]]; then
+                            echo "      Size: ${size_mb} MB"
+                        fi
                     fi
                 fi
-            fi
+            done <<< "$apk_files"
             
             echo ""
             print_success "Build complete! 🎉"
@@ -240,7 +351,10 @@ download_artifact() {
         fi
     else
         print_error "Failed to download artifact"
-        echo "You can download it manually from GitHub Actions"
+        echo "$download_output"
+        echo ""
+        echo "You can download it manually from:"
+        echo "  https://github.com/$(get_repo_owner)/$(get_repo_name)/actions"
         exit 1
     fi
 }

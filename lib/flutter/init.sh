@@ -55,7 +55,7 @@ cmd_init() {
         app_name="app"
     fi
     
-    # Create workflow file
+    # Create workflow file with latest Flutter
     cat > ".github/workflows/krinry-build.yml" << 'WORKFLOW_EOF'
 name: krinry Build
 
@@ -65,11 +65,12 @@ on:
       build_type:
         description: 'Build type'
         required: true
-        default: 'release'
+        default: 'debug'
         type: choice
         options:
-          - release
           - debug
+          - release
+          - split
 
 jobs:
   build:
@@ -79,21 +80,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.3'
           channel: 'stable'
           cache: true
+          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
+          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
+      
+      - name: Flutter version
+        run: flutter --version
       
       - name: Get dependencies
         run: flutter pub get
       
       - name: Build APK
         run: |
-          if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
+          BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          
+          if [ "$BUILD_TYPE" = "debug" ]; then
+            echo "Building debug APK..."
             flutter build apk --debug
+          elif [ "$BUILD_TYPE" = "split" ]; then
+            echo "Building release split APKs..."
+            flutter build apk --release --split-per-abi
           else
+            echo "Building release APK..."
             flutter build apk --release
           fi
       
@@ -146,6 +165,8 @@ CONFIG_EOF
     echo "     git push"
     echo ""
     echo "  3. Build your APK:"
-    echo "     krinry flutter build apk --release"
+    echo "     krinry flutter build apk              # Debug"
+    echo "     krinry flutter build apk --release    # Release"
+    echo "     krinry flutter build apk --split      # Split by ABI"
     echo ""
 }
