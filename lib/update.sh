@@ -56,7 +56,7 @@ cmd_update() {
     else
         print_error "Update failed"
         echo "Try reinstalling:"
-        echo "  curl -fsSL https://raw.githubusercontent.com/krinry/krinry/main/install.sh | bash"
+        echo "  curl -fsSL https://raw.githubusercontent.com/krinry/krinry-cli/main/install.sh | bash"
         exit 1
     fi
 }

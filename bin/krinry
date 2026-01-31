@@ -150,12 +150,32 @@ run_flutter_tool() {
             ;;
         build)
             shift
+            source "${LIB_DIR}/flutter/build.sh"
             if [[ "$1" == "apk" ]]; then
-                source "${LIB_DIR}/flutter/build.sh"
-                cmd_build_apk "${@:2}"
+                cmd_build "apk" "${@:2}"
+            elif [[ "$1" == "appbundle" || "$1" == "aab" ]]; then
+                cmd_build "appbundle" "${@:2}"
+            elif [[ -z "$1" || "$1" == --* ]]; then
+                # No target specified, default to apk
+                cmd_build "apk" "$@"
             else
                 print_error "Unknown build target: $1"
-                echo "Usage: krinry flutter build apk [--release|--debug]"
+                echo ""
+                echo "Usage: krinry flutter build <target> [options]"
+                echo ""
+                echo "Targets:"
+                echo "  apk        Build Android APK"
+                echo "  appbundle  Build Android App Bundle (AAB)"
+                echo ""
+                echo "Options:"
+                echo "  --debug    Debug build (default)"
+                echo "  --profile  Profile build"
+                echo "  --release  Release build"
+                echo "  --split    Split APK by ABI"
+                echo "  --arm64    ARM64 only"
+                echo "  --arm      ARM only"
+                echo "  --x64      x64 only"
+                echo "  --install  Install on device after build"
                 exit 1
             fi
             ;;
@@ -181,18 +201,27 @@ show_flutter_help() {
     echo "  krinry flutter <command> [options]"
     echo ""
     echo -e "${BOLD}COMMANDS:${NC}"
-    echo "  install        Install Flutter SDK for Termux"
-    echo "  doctor         Check system requirements"
-    echo "  init           Initialize cloud build in Flutter project"
-    echo "  build apk      Build APK using cloud (GitHub Actions)"
-    echo "  run web        Run Flutter web server (local)"
+    echo "  install            Install Flutter SDK for Termux"
+    echo "  doctor             Check system requirements"
+    echo "  init               Initialize cloud build in Flutter project"
+    echo "  build apk          Build APK using cloud (GitHub Actions)"
+    echo "  build appbundle    Build AAB using cloud (GitHub Actions)"
+    echo "  run web            Run Flutter web server (local)"
+    echo ""
+    echo -e "${BOLD}BUILD OPTIONS:${NC}"
+    echo "  --debug            Debug build (default)"
+    echo "  --profile          Profile build"
+    echo "  --release          Release build"
+    echo "  --split            Split APK by ABI"
+    echo "  --arm64/--arm/--x64  Target specific platform"
+    echo "  --install          Install on device after download"
     echo ""
     echo -e "${BOLD}EXAMPLES:${NC}"
-    echo "  krinry flutter install"
-    echo "  krinry flutter doctor"
-    echo "  krinry flutter init"
-    echo "  krinry flutter build apk --release"
-    echo "  krinry flutter run web"
+    echo "  krinry flutter build apk              # Debug APK"
+    echo "  krinry flutter build apk --release    # Release APK"
+    echo "  krinry flutter build apk --split      # Split APKs"
+    echo "  krinry flutter build appbundle        # App Bundle"
+    echo "  krinry flutter build apk --install    # Build & install"
     echo ""
 }
 
