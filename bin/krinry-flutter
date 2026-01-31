@@ -1,0 +1,107 @@
+#!/bin/bash
+# krinry-flutter - Main CLI Entry Point
+# A mobile-first Flutter CLI for Termux
+
+set -e
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(cd "${SCRIPT_DIR}/../lib" && pwd)"
+
+# Source core library
+source "${LIB_DIR}/core.sh"
+
+# ============ Help Text ============
+
+show_help() {
+    echo ""
+    echo -e "${BOLD}${CYAN}krinry-flutter${NC} v${VERSION}"
+    echo "A mobile-first Flutter CLI for Termux"
+    echo ""
+    echo -e "${BOLD}USAGE:${NC}"
+    echo "  krinry-flutter <command> [options]"
+    echo ""
+    echo -e "${BOLD}COMMANDS:${NC}"
+    echo "  install flutter    Install Flutter SDK for Termux"
+    echo "  doctor             Check system requirements"
+    echo "  init               Initialize cloud build in Flutter project"
+    echo "  build apk          Build APK using cloud (GitHub Actions)"
+    echo ""
+    echo -e "${BOLD}OPTIONS:${NC}"
+    echo "  --help, -h         Show this help message"
+    echo "  --version, -v      Show version"
+    echo ""
+    echo -e "${BOLD}EXAMPLES:${NC}"
+    echo "  krinry-flutter install flutter"
+    echo "  krinry-flutter doctor"
+    echo "  krinry-flutter init"
+    echo "  krinry-flutter build apk --release"
+    echo ""
+    echo -e "${BOLD}DOCS:${NC}"
+    echo "  https://github.com/krinry/krinry-flutter"
+    echo ""
+}
+
+show_version() {
+    echo "krinry-flutter v${VERSION}"
+}
+
+# ============ Command Router ============
+
+main() {
+    # No arguments - show help
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 0
+    fi
+    
+    # Parse command
+    case "$1" in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --version|-v)
+            show_version
+            exit 0
+            ;;
+        install)
+            shift
+            if [[ "$1" == "flutter" ]]; then
+                source "${LIB_DIR}/install_flutter.sh"
+                cmd_install_flutter "${@:2}"
+            else
+                print_error "Unknown install target: $1"
+                echo "Usage: krinry-flutter install flutter"
+                exit 1
+            fi
+            ;;
+        doctor)
+            source "${LIB_DIR}/doctor.sh"
+            cmd_doctor "${@:2}"
+            ;;
+        init)
+            source "${LIB_DIR}/init.sh"
+            cmd_init "${@:2}"
+            ;;
+        build)
+            shift
+            if [[ "$1" == "apk" ]]; then
+                source "${LIB_DIR}/build.sh"
+                cmd_build_apk "${@:2}"
+            else
+                print_error "Unknown build target: $1"
+                echo "Usage: krinry-flutter build apk [--release|--debug]"
+                exit 1
+            fi
+            ;;
+        *)
+            print_error "Unknown command: $1"
+            echo "Run 'krinry-flutter --help' for usage"
+            exit 1
+            ;;
+    esac
+}
+
+# Run main
+main "$@"
