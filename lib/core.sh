@@ -3,7 +3,7 @@
 # Shared utilities for all tools
 
 # Version
-VERSION="2.3.0"
+VERSION="2.4.0"
 
 # Colors for output
 RED='\033[0;31m'

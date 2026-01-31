@@ -45,7 +45,7 @@ cmd_init() {
     print_success "GitHub remote: ${remote_url}"
     
     # Create workflow directory
-    print_step "Creating GitHub Actions workflow..."
+    print_step "Setting up GitHub Actions workflow..."
     ensure_dir ".github/workflows"
     
     # Get project name from pubspec
@@ -55,139 +55,53 @@ cmd_init() {
         app_name="app"
     fi
     
-    # Create the complete workflow file with all options
-    cat > ".github/workflows/krinry-build.yml" << 'WORKFLOW_EOF'
-name: krinry Build
-
-on:
-  workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build type'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - profile
-          - release
-      
-      output_type:
-        description: 'Output type'
-        required: true
-        default: 'apk'
-        type: choice
-        options:
-          - apk
-          - appbundle
-          - apk-split
-      
-      target_platform:
-        description: 'Target platform (APK only)'
-        required: false
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - android-arm64
-          - android-arm
-          - android-x64
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
+    # Check for existing workflow file and remove it (auto-overwrite)
+    local workflow_file=".github/workflows/krinry-build.yml"
+    if [[ -f "$workflow_file" ]]; then
+        print_warning "Existing workflow found - updating..."
+        rm -f "$workflow_file"
+    fi
     
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
-      
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          flutter-version-file: pubspec.yaml
-          cache: true
-          cache-key: 'flutter-:os:-:channel:-:version:-:arch:'
-          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
-      
-      - name: Flutter version
-        run: flutter --version
-      
-      - name: Get dependencies
-        run: flutter pub get
-      
-      - name: Build
-        run: |
-          BUILD_TYPE="${{ github.event.inputs.build_type }}"
-          OUTPUT_TYPE="${{ github.event.inputs.output_type }}"
-          TARGET_PLATFORM="${{ github.event.inputs.target_platform }}"
-          
-          echo "🔨 Build Configuration:"
-          echo "  Type: $BUILD_TYPE"
-          echo "  Output: $OUTPUT_TYPE"
-          echo "  Platform: $TARGET_PLATFORM"
-          echo ""
-          
-          # Build APK
-          if [ "$OUTPUT_TYPE" = "apk" ]; then
-            if [ "$TARGET_PLATFORM" != "all" ]; then
-              echo "Building APK ($BUILD_TYPE) for $TARGET_PLATFORM..."
-              flutter build apk --$BUILD_TYPE --target-platform $TARGET_PLATFORM
-            else
-              echo "Building APK ($BUILD_TYPE)..."
-              flutter build apk --$BUILD_TYPE
-            fi
-          
-          # Build APK split per ABI
-          elif [ "$OUTPUT_TYPE" = "apk-split" ]; then
-            echo "Building split APKs ($BUILD_TYPE)..."
-            flutter build apk --$BUILD_TYPE --split-per-abi
-          
-          # Build App Bundle
-          elif [ "$OUTPUT_TYPE" = "appbundle" ]; then
-            echo "Building App Bundle ($BUILD_TYPE)..."
-            flutter build appbundle --$BUILD_TYPE
-          fi
-      
-      - name: Upload APK
-        if: ${{ github.event.inputs.output_type == 'apk' || github.event.inputs.output_type == 'apk-split' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ github.event.inputs.build_type }}-${{ github.event.inputs.output_type }}
-          path: build/app/outputs/flutter-apk/*.apk
-          retention-days: 7
-      
-      - name: Upload App Bundle
-        if: ${{ github.event.inputs.output_type == 'appbundle' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ github.event.inputs.build_type }}-${{ github.event.inputs.output_type }}
-          path: build/app/outputs/bundle/*/*.aab
-          retention-days: 7
-WORKFLOW_EOF
+    # Also remove old workflow names
+    rm -f ".github/workflows/krinry-flutter-build.yml" 2>/dev/null
     
-    print_success "Created .github/workflows/krinry-build.yml"
+    # Copy workflow from krinry template directory
+    local template_file="${KRINRY_HOME}/workflows/krinry-flutter-build.yml"
     
-    # Create config file
+    if [[ -f "$template_file" ]]; then
+        # Copy from template
+        cp "$template_file" "$workflow_file"
+        print_success "Copied workflow from template"
+    else
+        # Fallback: download latest from GitHub
+        print_step "Downloading latest workflow..."
+        curl -fsSL "https://raw.githubusercontent.com/krinry/krinry-cli/main/workflows/krinry-flutter-build.yml" -o "$workflow_file" 2>/dev/null
+        
+        if [[ ! -f "$workflow_file" || ! -s "$workflow_file" ]]; then
+            print_error "Failed to download workflow template"
+            echo "Please check your internet connection and try again"
+            exit 1
+        fi
+        print_success "Downloaded latest workflow"
+    fi
+    
+    # Rename workflow to krinry-build.yml (standard name)
+    if [[ -f "$workflow_file" ]]; then
+        print_success "Created .github/workflows/krinry-build.yml"
+    fi
+    
+    # Create/update config file
     print_step "Creating configuration file..."
     
     cat > ".krinry.yaml" << CONFIG_EOF
-# krinry configuration
+# krinry configuration v${VERSION}
 project:
   name: ${app_name}
   type: flutter
 
 build:
-  apk:
-    artifact: app-release.apk
-    output_path: build/app/outputs/flutter-apk
+  default_type: debug
+  output_path: build/app/outputs/flutter-apk
 
 cloud:
   provider: github
@@ -197,26 +111,48 @@ CONFIG_EOF
     
     print_success "Created .krinry.yaml"
     
+    # Add to .gitignore if not present
+    if [[ -f ".gitignore" ]]; then
+        if ! grep -q "# krinry" .gitignore 2>/dev/null; then
+            echo "" >> .gitignore
+            echo "# krinry" >> .gitignore
+            echo ".krinry-cache/" >> .gitignore
+        fi
+    fi
+    
     # Summary
     echo ""
     print_header "Initialization Complete"
     echo ""
-    echo "Created files:"
+    echo "Created/Updated files:"
     echo "  • .github/workflows/krinry-build.yml"
     echo "  • .krinry.yaml"
     echo ""
     echo "Next steps:"
-    echo "  1. Commit these files:"
-    echo "     git add ."
-    echo "     git commit -m 'Add krinry cloud build'"
+    echo "  1. Commit and push:"
+    echo "     git add . && git commit -m 'Add krinry cloud build' && git push"
     echo ""
-    echo "  2. Push to GitHub:"
-    echo "     git push"
+    echo "  2. Build commands (same as flutter build):"
     echo ""
-    echo "  3. Build your APK:"
-    echo "     krinry flutter build apk"
+    echo -e "${CYAN}# APK builds${NC}"
+    echo "     krinry flutter build apk --debug"
     echo "     krinry flutter build apk --release"
+    echo ""
+    echo -e "${CYAN}# Split APK (smaller per-device)${NC}"
     echo "     krinry flutter build apk --release --split-per-abi"
+    echo ""
+    echo -e "${CYAN}# Target specific architecture${NC}"
+    echo "     krinry flutter build apk --release --target-platform android-arm64"
+    echo ""
+    echo -e "${CYAN}# App Bundle (for Play Store)${NC}"
     echo "     krinry flutter build appbundle --release"
+    echo ""
+    echo -e "${CYAN}# Build and install on device${NC}"
+    echo "     krinry flutter build apk --release --install"
+    echo ""
+    echo -e "${GREEN}💡 Pro tips:${NC}"
+    echo "  • Use --split-per-abi for ~60% smaller APKs"
+    echo "  • Use --install to auto-install after build"
+    echo "  • ARM64 devices: use --target-platform android-arm64"
     echo ""
 }
