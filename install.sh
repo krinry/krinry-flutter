@@ -128,6 +128,19 @@ else
     print_warning "jq not installed (optional)"
 fi
 
+# termux-api (for Termux - enables auto browser open)
+if is_termux; then
+    if ! check_cmd termux-open-url; then
+        print_step "Installing termux-api (for auto browser open)..."
+        pkg install -y termux-api 2>/dev/null || true
+    fi
+    if check_cmd termux-open-url; then
+        print_success "termux-api installed"
+    else
+        print_warning "termux-api not installed (optional, for 'run web' auto-open)"
+    fi
+fi
+
 # Clone or update repository
 print_step "Installing krinry-flutter..."
 

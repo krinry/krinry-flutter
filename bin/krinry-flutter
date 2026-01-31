@@ -4,15 +4,33 @@
 
 set -e
 
-# Get script directory (resolve symlinks)
-SCRIPT_SOURCE="${BASH_SOURCE[0]}"
-while [ -L "$SCRIPT_SOURCE" ]; do
-    SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
-    SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
-    [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
-done
-SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" && pwd)"
-LIB_DIR="${SCRIPT_DIR}/../lib"
+# Installation directory (standard location)
+KRINRY_INSTALL_DIR="${HOME}/.krinry-flutter"
+
+# If running from different location, try to resolve
+if [[ ! -d "${KRINRY_INSTALL_DIR}/lib" ]]; then
+    # Fallback: resolve from script path
+    SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+    # Follow symlinks
+    while [[ -L "$SCRIPT_SOURCE" ]]; do
+        LINK_TARGET="$(readlink "$SCRIPT_SOURCE" 2>/dev/null || ls -la "$SCRIPT_SOURCE" | awk '{print $NF}')"
+        if [[ "$LINK_TARGET" == /* ]]; then
+            SCRIPT_SOURCE="$LINK_TARGET"
+        else
+            SCRIPT_SOURCE="$(dirname "$SCRIPT_SOURCE")/$LINK_TARGET"
+        fi
+    done
+    KRINRY_INSTALL_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")/.." && pwd)"
+fi
+
+LIB_DIR="${KRINRY_INSTALL_DIR}/lib"
+
+# Verify lib directory exists
+if [[ ! -f "${LIB_DIR}/core.sh" ]]; then
+    echo "Error: Cannot find krinry-flutter library at ${LIB_DIR}"
+    echo "Please reinstall: curl -fsSL https://raw.githubusercontent.com/krinry/krinry-flutter/main/install.sh | bash"
+    exit 1
+fi
 
 # Source core library
 source "${LIB_DIR}/core.sh"
@@ -33,6 +51,7 @@ show_help() {
     echo "  init               Initialize cloud build in Flutter project"
     echo "  build apk          Build APK using cloud (GitHub Actions)"
     echo "  run web            Run Flutter web server (local)"
+    echo "  update             Update krinry-flutter to latest version"
     echo ""
     echo -e "${BOLD}OPTIONS:${NC}"
     echo "  --help, -h         Show this help message"
@@ -44,6 +63,7 @@ show_help() {
     echo "  krinry-flutter init"
     echo "  krinry-flutter build apk --release"
     echo "  krinry-flutter run web"
+    echo "  krinry-flutter update"
     echo ""
     echo -e "${BOLD}DOCS:${NC}"
     echo "  https://github.com/krinry/krinry-flutter"
@@ -107,6 +127,10 @@ main() {
             shift
             source "${LIB_DIR}/run.sh"
             cmd_run "${@}"
+            ;;
+        update)
+            source "${LIB_DIR}/update.sh"
+            cmd_update
             ;;
         *)
             print_error "Unknown command: $1"
