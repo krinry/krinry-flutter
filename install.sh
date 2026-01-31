@@ -1,6 +1,6 @@
 #!/bin/bash
-# krinry-flutter Installer
-# One-line installation: curl -fsSL https://raw.githubusercontent.com/krinry/krinry-flutter/main/install.sh | bash
+# krinry Installer
+# One-line installation: curl -fsSL https://raw.githubusercontent.com/krinry/krinry/main/install.sh | bash
 
 set -e
 
@@ -22,14 +22,14 @@ print_step() { echo -e "${CYAN}→${NC} $1"; }
 # Banner
 echo ""
 echo -e "${BOLD}${CYAN}"
-echo "  _          _                       __ _       _   _            "
-echo " | | ___ __ (_)_ __  _ __ _   _     / _| |_   _| |_| |_ ___ _ __ "
-echo " | |/ / '__|| | '_ \| '__| | | |___| |_| | | | | __| __/ _ \ '__|"
-echo " |   <| |   | | | | | |  | |_| |___|  _| | |_| | |_| ||  __/ |   "
-echo " |_|\_\_|   |_|_| |_|_|   \__, |   |_| |_|\__,_|\__|\__\___|_|   "
-echo "                          |___/                                   "
+echo "  _          _                   "
+echo " | | ___ __ (_)_ __  _ __ _   _  "
+echo " | |/ / '__|| | '_ \| '__| | | | "
+echo " |   <| |   | | | | | |  | |_| | "
+echo " |_|\_\_|   |_|_| |_|_|   \__, | "
+echo "                          |___/  "
 echo -e "${NC}"
-echo -e "${BOLD}Mobile-first Flutter CLI for Termux${NC}"
+echo -e "${BOLD}Multi-purpose CLI for mobile developers${NC}"
 echo ""
 
 # Detect Termux
@@ -43,8 +43,8 @@ check_cmd() {
 }
 
 # Install directory
-INSTALL_DIR="${HOME}/.krinry-flutter"
-REPO_URL="https://github.com/krinry/krinry-flutter.git"
+INSTALL_DIR="${HOME}/.krinry"
+REPO_URL="https://github.com/krinry/krinry.git"
 
 # Detect environment
 if is_termux; then
@@ -142,28 +142,30 @@ if is_termux; then
 fi
 
 # Clone or update repository
-print_step "Installing krinry-flutter..."
+print_step "Installing krinry..."
 
 if [[ -d "$INSTALL_DIR" ]]; then
     print_info "Updating existing installation..."
     cd "$INSTALL_DIR"
-    git pull origin main 2>/dev/null || git pull 2>/dev/null || true
+    git fetch origin main 2>/dev/null || true
+    git reset --hard origin/main 2>/dev/null || git pull 2>/dev/null || true
 else
     print_info "Cloning repository..."
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # Make scripts executable
-chmod +x "$INSTALL_DIR/bin/krinry-flutter"
+chmod +x "$INSTALL_DIR/bin/krinry" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/lib/"*.sh 2>/dev/null || true
+chmod +x "$INSTALL_DIR/lib/flutter/"*.sh 2>/dev/null || true
 
 # Create bin directory if needed
 mkdir -p "$BIN_DIR"
 
 # Create symlink
 print_step "Creating symlink..."
-ln -sf "$INSTALL_DIR/bin/krinry-flutter" "$BIN_DIR/krinry-flutter"
-print_success "Symlink created at $BIN_DIR/krinry-flutter"
+ln -sf "$INSTALL_DIR/bin/krinry" "$BIN_DIR/krinry"
+print_success "Symlink created at $BIN_DIR/krinry"
 
 # Add to PATH if needed
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
@@ -180,7 +182,7 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     
     if ! grep -q "$BIN_DIR" "$SHELL_RC" 2>/dev/null; then
         echo "" >> "$SHELL_RC"
-        echo "# krinry-flutter" >> "$SHELL_RC"
+        echo "# krinry" >> "$SHELL_RC"
         echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$SHELL_RC"
         print_success "Added to $SHELL_RC"
     fi
@@ -204,17 +206,21 @@ fi
 # Done!
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}✓${NC} ${BOLD}krinry-flutter installed successfully!${NC}"
+echo -e "${GREEN}✓${NC} ${BOLD}krinry installed successfully!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "Quick start:"
-echo "  krinry-flutter --help         Show all commands"
-echo "  krinry-flutter install flutter Install Flutter SDK"
-echo "  krinry-flutter doctor          Check your setup"
+echo "  krinry --help              Show all commands"
+echo "  krinry flutter install     Install Flutter SDK"
+echo "  krinry flutter doctor      Check your setup"
 echo ""
 echo "In a Flutter project:"
-echo "  krinry-flutter init            Setup cloud build"
-echo "  krinry-flutter build apk       Build APK in cloud"
+echo "  krinry flutter init            Setup cloud build"
+echo "  krinry flutter build apk       Build APK in cloud"
+echo "  krinry flutter run web         Run web server locally"
+echo ""
+echo "Update:"
+echo "  krinry update"
 echo ""
 if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
     print_warning "Please restart your terminal or run:"

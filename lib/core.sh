@@ -1,9 +1,9 @@
 #!/bin/bash
-# krinry-flutter - Core Library
-# Shared utilities for all commands
+# krinry - Core Library
+# Shared utilities for all tools
 
 # Version
-VERSION="1.0.0"
+VERSION="2.0.0"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,9 +15,9 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Paths
-KRINRY_HOME="${HOME}/.krinry-flutter"
-FLUTTER_HOME="${KRINRY_HOME}/flutter"
-CONFIG_FILE=".krinry-flutter.yaml"
+KRINRY_HOME="${HOME}/.krinry"
+FLUTTER_HOME="${KRINRY_HOME}/sdk/flutter"
+CONFIG_FILE=".krinry.yaml"
 
 # ============ Logging Functions ============
 
@@ -91,7 +91,7 @@ read_config() {
 }
 
 config_exists() {
-    [[ -f ".krinry-flutter.yaml" ]]
+    [[ -f ".krinry.yaml" ]]
 }
 
 # ============ Git Functions ============
@@ -132,7 +132,7 @@ is_flutter_project() {
 }
 
 has_workflow_file() {
-    [[ -f ".github/workflows/krinry-flutter-build.yml" ]]
+    [[ -f ".github/workflows/krinry-build.yml" ]]
 }
 
 # ============ Progress Functions ============

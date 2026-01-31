@@ -1,0 +1,200 @@
+#!/bin/bash
+# krinry - Multi-purpose CLI for Termux
+# Usage: krinry <tool> [command] [options]
+# Example: krinry flutter build apk --release
+#          krinry flutter doctor
+#          krinry --help
+
+set -e
+
+# Installation directory (standard location)
+KRINRY_HOME="${HOME}/.krinry"
+
+# If running from different location, try to resolve
+if [[ ! -d "${KRINRY_HOME}/lib" ]]; then
+    # Fallback: resolve from script path
+    SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+    # Follow symlinks
+    while [[ -L "$SCRIPT_SOURCE" ]]; do
+        LINK_TARGET="$(readlink "$SCRIPT_SOURCE" 2>/dev/null || ls -la "$SCRIPT_SOURCE" | awk '{print $NF}')"
+        if [[ "$LINK_TARGET" == /* ]]; then
+            SCRIPT_SOURCE="$LINK_TARGET"
+        else
+            SCRIPT_SOURCE="$(dirname "$SCRIPT_SOURCE")/$LINK_TARGET"
+        fi
+    done
+    KRINRY_HOME="$(cd "$(dirname "$SCRIPT_SOURCE")/.." && pwd)"
+fi
+
+LIB_DIR="${KRINRY_HOME}/lib"
+TOOLS_DIR="${KRINRY_HOME}/tools"
+
+# Verify lib directory exists
+if [[ ! -f "${LIB_DIR}/core.sh" ]]; then
+    echo "Error: Cannot find krinry library at ${LIB_DIR}"
+    echo "Please reinstall: curl -fsSL https://raw.githubusercontent.com/krinry/krinry/main/install.sh | bash"
+    exit 1
+fi
+
+# Source core library
+source "${LIB_DIR}/core.sh"
+
+# ============ Help Text ============
+
+show_help() {
+    echo ""
+    echo -e "${BOLD}${CYAN}krinry${NC} v${VERSION}"
+    echo "Multi-purpose CLI for mobile developers"
+    echo ""
+    echo -e "${BOLD}USAGE:${NC}"
+    echo "  krinry <tool> [command] [options]"
+    echo ""
+    echo -e "${BOLD}TOOLS:${NC}"
+    echo "  flutter     Flutter development & cloud builds"
+    echo ""
+    echo -e "${BOLD}GLOBAL COMMANDS:${NC}"
+    echo "  --help, -h      Show this help message"
+    echo "  --version, -v   Show version"
+    echo "  update          Update krinry to latest version"
+    echo ""
+    echo -e "${BOLD}FLUTTER COMMANDS:${NC}"
+    echo "  krinry flutter install     Install Flutter SDK"
+    echo "  krinry flutter doctor       Check system requirements"
+    echo "  krinry flutter init         Initialize cloud build"
+    echo "  krinry flutter build apk    Build APK in cloud"
+    echo "  krinry flutter run web      Run Flutter web server"
+    echo ""
+    echo -e "${BOLD}EXAMPLES:${NC}"
+    echo "  krinry flutter install"
+    echo "  krinry flutter build apk --release"
+    echo "  krinry flutter run web"
+    echo "  krinry update"
+    echo ""
+    echo -e "${BOLD}DOCS:${NC}"
+    echo "  https://github.com/krinry/krinry"
+    echo ""
+}
+
+show_version() {
+    echo "krinry v${VERSION}"
+}
+
+# ============ Tool Router ============
+
+main() {
+    # No arguments - show help
+    if [[ $# -eq 0 ]]; then
+        show_help
+        exit 0
+    fi
+    
+    # Parse first argument
+    case "$1" in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --version|-v)
+            show_version
+            exit 0
+            ;;
+        update)
+            source "${LIB_DIR}/update.sh"
+            cmd_update
+            ;;
+        flutter)
+            shift
+            run_flutter_tool "$@"
+            ;;
+        *)
+            # Check if it's a tool in the tools directory
+            if [[ -f "${TOOLS_DIR}/$1/main.sh" ]]; then
+                local tool_name="$1"
+                shift
+                source "${TOOLS_DIR}/${tool_name}/main.sh"
+                tool_main "$@"
+            else
+                print_error "Unknown tool: $1"
+                echo "Run 'krinry --help' for available tools"
+                exit 1
+            fi
+            ;;
+    esac
+}
+
+# ============ Flutter Tool ============
+
+run_flutter_tool() {
+    # No subcommand - show flutter help
+    if [[ $# -eq 0 ]]; then
+        show_flutter_help
+        exit 0
+    fi
+    
+    case "$1" in
+        --help|-h)
+            show_flutter_help
+            exit 0
+            ;;
+        install)
+            source "${LIB_DIR}/flutter/install.sh"
+            cmd_install_flutter "${@:2}"
+            ;;
+        doctor)
+            source "${LIB_DIR}/flutter/doctor.sh"
+            cmd_doctor "${@:2}"
+            ;;
+        init)
+            source "${LIB_DIR}/flutter/init.sh"
+            cmd_init "${@:2}"
+            ;;
+        build)
+            shift
+            if [[ "$1" == "apk" ]]; then
+                source "${LIB_DIR}/flutter/build.sh"
+                cmd_build_apk "${@:2}"
+            else
+                print_error "Unknown build target: $1"
+                echo "Usage: krinry flutter build apk [--release|--debug]"
+                exit 1
+            fi
+            ;;
+        run)
+            shift
+            source "${LIB_DIR}/flutter/run.sh"
+            cmd_run "${@}"
+            ;;
+        *)
+            print_error "Unknown flutter command: $1"
+            echo "Run 'krinry flutter --help' for usage"
+            exit 1
+            ;;
+    esac
+}
+
+show_flutter_help() {
+    echo ""
+    echo -e "${BOLD}${CYAN}krinry flutter${NC}"
+    echo "Flutter development & cloud builds for Termux"
+    echo ""
+    echo -e "${BOLD}USAGE:${NC}"
+    echo "  krinry flutter <command> [options]"
+    echo ""
+    echo -e "${BOLD}COMMANDS:${NC}"
+    echo "  install        Install Flutter SDK for Termux"
+    echo "  doctor         Check system requirements"
+    echo "  init           Initialize cloud build in Flutter project"
+    echo "  build apk      Build APK using cloud (GitHub Actions)"
+    echo "  run web        Run Flutter web server (local)"
+    echo ""
+    echo -e "${BOLD}EXAMPLES:${NC}"
+    echo "  krinry flutter install"
+    echo "  krinry flutter doctor"
+    echo "  krinry flutter init"
+    echo "  krinry flutter build apk --release"
+    echo "  krinry flutter run web"
+    echo ""
+}
+
+# Run main
+main "$@"

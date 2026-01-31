@@ -1,8 +1,8 @@
 #!/bin/bash
-# krinry-flutter - Init Command
+# krinry flutter - Init Command
 
 cmd_init() {
-    print_header "Initialize krinry-flutter"
+    print_header "Initialize krinry flutter"
     
     # Check if in Flutter project
     if ! is_flutter_project; then
@@ -37,7 +37,7 @@ cmd_init() {
     # Verify it's a GitHub URL
     if [[ "$remote_url" != *"github.com"* ]]; then
         print_warning "Remote doesn't appear to be GitHub: ${remote_url}"
-        echo "krinry-flutter currently only supports GitHub for cloud builds"
+        echo "krinry currently only supports GitHub for cloud builds"
         if ! ask_yes_no "Continue anyway?"; then
             exit 1
         fi
@@ -56,8 +56,8 @@ cmd_init() {
     fi
     
     # Create workflow file
-    cat > ".github/workflows/krinry-flutter-build.yml" << 'WORKFLOW_EOF'
-name: krinry-flutter Build
+    cat > ".github/workflows/krinry-build.yml" << 'WORKFLOW_EOF'
+name: krinry Build
 
 on:
   workflow_dispatch:
@@ -105,13 +105,13 @@ jobs:
           retention-days: 7
 WORKFLOW_EOF
     
-    print_success "Created .github/workflows/krinry-flutter-build.yml"
+    print_success "Created .github/workflows/krinry-build.yml"
     
     # Create config file
     print_step "Creating configuration file..."
     
-    cat > ".krinry-flutter.yaml" << CONFIG_EOF
-# krinry-flutter configuration
+    cat > ".krinry.yaml" << CONFIG_EOF
+# krinry configuration
 project:
   name: ${app_name}
   type: flutter
@@ -123,29 +123,29 @@ build:
 
 cloud:
   provider: github
-  workflow: krinry-flutter-build.yml
+  workflow: krinry-build.yml
   poll_interval: 8
 CONFIG_EOF
     
-    print_success "Created .krinry-flutter.yaml"
+    print_success "Created .krinry.yaml"
     
     # Summary
     echo ""
     print_header "Initialization Complete"
     echo ""
     echo "Created files:"
-    echo "  • .github/workflows/krinry-flutter-build.yml"
-    echo "  • .krinry-flutter.yaml"
+    echo "  • .github/workflows/krinry-build.yml"
+    echo "  • .krinry.yaml"
     echo ""
     echo "Next steps:"
     echo "  1. Commit these files:"
     echo "     git add ."
-    echo "     git commit -m 'Add krinry-flutter cloud build'"
+    echo "     git commit -m 'Add krinry cloud build'"
     echo ""
     echo "  2. Push to GitHub:"
     echo "     git push"
     echo ""
     echo "  3. Build your APK:"
-    echo "     krinry-flutter build apk --release"
+    echo "     krinry flutter build apk --release"
     echo ""
 }

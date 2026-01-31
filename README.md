@@ -1,81 +1,45 @@
-# krinry-flutter
+# krinry
 
-A mobile-first Flutter CLI that lets you build, run and manage Flutter apps on Android phones using Termux and cloud builds — **without a PC**.
+A multi-purpose CLI for mobile developers. Build Flutter apps on Android phones using Termux and cloud builds — **without a PC**.
 
 ## ✨ Features
 
 - 📱 **Mobile-first**: Designed for Termux on Android
 - ☁️ **Cloud builds**: Build APKs using GitHub Actions (no heavy local tools needed)
+- 🔌 **Extensible**: Modular tool system for future expansions
 - ⚡ **One-command experience**: Simple, intuitive CLI
 - 🔒 **Secure**: Never stores tokens, uses GitHub CLI for auth
 
 ## 🚀 Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/krinry/krinry-flutter/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/krinry/krinry/main/install.sh | bash
 ```
 
 This will:
-- Install required packages (git, gh, curl, jq)
-- Clone krinry-flutter
+- Install required packages (git, gh, curl, jq, termux-api)
+- Clone krinry
 - Set up the CLI in your PATH
 - Guide you through GitHub authentication
 
 ## 📖 Commands
 
-### Install Flutter
+### Global
 
 ```bash
-krinry-flutter install flutter
+krinry --help       # Show all commands
+krinry update       # Update to latest version
 ```
 
-Downloads and configures Flutter SDK for Termux.
-
-### Check Setup
+### Flutter Tool
 
 ```bash
-krinry-flutter doctor
+krinry flutter install      # Install Flutter SDK
+krinry flutter doctor       # Check system requirements
+krinry flutter init         # Initialize cloud build
+krinry flutter build apk    # Build APK in cloud
+krinry flutter run web      # Run Flutter web server locally
 ```
-
-Verifies all requirements:
-- ✓ Flutter installed
-- ✓ Git installed
-- ✓ GitHub CLI authenticated
-- ✓ Project configuration
-
-### Initialize Project
-
-```bash
-krinry-flutter init
-```
-
-Sets up cloud build for your Flutter project:
-- Creates GitHub Actions workflow
-- Creates `.krinry-flutter.yaml` config
-
-### Build APK
-
-```bash
-krinry-flutter build apk --release
-krinry-flutter build apk --debug
-```
-
-Triggers a cloud build and downloads the APK:
-1. Pushes your code to GitHub
-2. Triggers GitHub Actions workflow
-3. Shows real-time build progress
-4. Downloads APK to `build/app/outputs/flutter-apk/`
-
-### Run Web Server
-
-```bash
-krinry-flutter run web
-```
-
-Runs your Flutter app as a web server locally:
-- Starts on port 8080 (by default)
-- Auto-opens browser using `termux-open-url`
-- Access from any device on the same network
 
 ## 📋 Requirements
 
@@ -88,7 +52,7 @@ Runs your Flutter app as a web server locally:
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Termux    │────▶│   GitHub    │────▶│   Actions   │
-│ krinry-cli  │     │    API      │     │   Runner    │
+│ krinry cli  │     │    API      │     │   Runner    │
 └─────────────┘     └─────────────┘     └─────────────┘
        ▲                                       │
        │                                       ▼
@@ -98,14 +62,14 @@ Runs your Flutter app as a web server locally:
 ```
 
 1. **You code** on your phone using any editor
-2. **Run** `krinry-flutter build apk`
+2. **Run** `krinry flutter build apk`
 3. **CLI pushes** your code to GitHub
 4. **GitHub Actions** builds the APK in the cloud
 5. **CLI downloads** the APK to your phone
 
 ## 🛠️ Configuration
 
-Configuration is stored in `.krinry-flutter.yaml`:
+Configuration is stored in `.krinry.yaml`:
 
 ```yaml
 project:
@@ -119,7 +83,7 @@ build:
 
 cloud:
   provider: github
-  workflow: krinry-flutter-build.yml
+  workflow: krinry-build.yml
   poll_interval: 8
 ```
 
@@ -143,9 +107,9 @@ gh auth login
 
 Initialize your project:
 ```bash
-krinry-flutter init
+krinry flutter init
 git add .
-git commit -m "Add cloud build"
+git commit -m "Init"
 git push
 ```
 
@@ -154,6 +118,15 @@ git push
 Check the logs:
 ```bash
 gh run view --log-failed
+```
+
+## 🔌 Extensibility
+
+krinry is designed to be extensible. Future tools can be added under the `tools/` directory:
+
+```
+krinry xyz ...     # Custom tool
+krinry abc ...     # Another tool
 ```
 
 ## 🤝 Contributing

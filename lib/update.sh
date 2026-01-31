@@ -1,13 +1,13 @@
 #!/bin/bash
-# krinry-flutter - Update Command
+# krinry - Update Command
 
 cmd_update() {
-    print_header "Update krinry-flutter"
+    print_header "Update krinry"
     
-    local install_dir="${HOME}/.krinry-flutter"
+    local install_dir="${HOME}/.krinry"
     
     if [[ ! -d "$install_dir" ]]; then
-        die "krinry-flutter not installed at ${install_dir}. Please reinstall."
+        die "krinry not installed at ${install_dir}. Please reinstall."
     fi
     
     print_step "Checking for updates..."
@@ -46,8 +46,9 @@ cmd_update() {
         echo ""
         
         # Make sure scripts are executable
-        chmod +x "${install_dir}/bin/krinry-flutter" 2>/dev/null || true
+        chmod +x "${install_dir}/bin/krinry" 2>/dev/null || true
         chmod +x "${install_dir}/lib/"*.sh 2>/dev/null || true
+        chmod +x "${install_dir}/lib/flutter/"*.sh 2>/dev/null || true
         
         echo "Restart your terminal or run:"
         echo "  source ~/.bashrc"
@@ -55,7 +56,7 @@ cmd_update() {
     else
         print_error "Update failed"
         echo "Try reinstalling:"
-        echo "  curl -fsSL https://raw.githubusercontent.com/krinry/krinry-flutter/main/install.sh | bash"
+        echo "  curl -fsSL https://raw.githubusercontent.com/krinry/krinry/main/install.sh | bash"
         exit 1
     fi
 }

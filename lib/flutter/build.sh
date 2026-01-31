@@ -64,7 +64,7 @@ cmd_build_apk() {
     fi
     
     # Trigger the workflow
-    if ! gh workflow run krinry-flutter-build.yml -f build_type="${build_type}" 2>/dev/null; then
+    if ! gh workflow run krinry-build.yml -f build_type="${build_type}" 2>/dev/null; then
         die "Failed to trigger workflow. Make sure you've pushed the workflow file."
     fi
     
@@ -78,7 +78,7 @@ cmd_build_apk() {
     print_step "Getting build status..."
     
     local run_id
-    run_id=$(gh run list --workflow=krinry-flutter-build.yml --limit=1 --json databaseId -q '.[0].databaseId' 2>/dev/null)
+    run_id=$(gh run list --workflow=krinry-build.yml --limit=1 --json databaseId -q '.[0].databaseId' 2>/dev/null)
     
     if [[ -z "$run_id" ]]; then
         die "Could not find the triggered workflow run"
