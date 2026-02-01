@@ -2,6 +2,31 @@
 
 All notable changes to krinry are documented here.
 
+## [2.7.1] - 2025-02-01
+
+### Added
+- Complete Zsh setup with one command: `krinry install oh-my-zsh`
+  - Zsh shell
+  - Oh My Zsh framework
+  - Powerlevel10k theme
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+  - zsh-completions
+- Automatic .zshrc configuration from the current shell
+
+## [2.7.0] - 2025-02-01
+
+### Added
+- `krinry install shell-tools` - Bundle with Fish, Zsh, TheFuck, Fzf
+- `krinry install fish` - Fish shell with auto-suggestions
+- `krinry install zsh` - Z Shell
+- `krinry install oh-my-zsh` - Complete Zsh setup
+- `krinry install thefuck` - Command correction tool
+- Post-install prompt asking to install shell-tools
+
+### Changed
+- Installer now asks if you want shell-tools after CLI install
+
 ## [2.6.0] - 2025-02-01
 
 ### Added
@@ -11,13 +36,15 @@ All notable changes to krinry are documented here.
 - Automatic TermuxVoid repository setup
 - krinry branding throughout CLI
 - TermuxVoid credit in install messages
+- Professional README with badges
+- CONTRIBUTING.md guide
+- CHANGELOG.md
 
 ### Changed
 - Completely rewrote `krinry update` for automatic updates
 - Auto-download latest version with backup
 - Shows changelog during updates
 - Silenced TermuxVoid output during install
-- Professional README with badges
 
 ### Fixed
 - Update command now actually auto-updates

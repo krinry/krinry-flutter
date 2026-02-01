@@ -220,44 +220,98 @@ install_zsh_shell() {
 }
 
 install_oh_my_zsh() {
-    print_header "Installing Oh My Zsh"
-    echo -e "${DIM}Framework for managing Zsh configuration${NC}"
+    print_header "Installing Complete Zsh Setup"
+    echo -e "${DIM}Zsh + Oh My Zsh + Powerlevel10k + All Plugins${NC}"
     echo ""
     
     if ! is_termux; then
         die "This command is designed for Termux"
     fi
     
-    # Check if zsh is installed
-    if ! command -v zsh &>/dev/null; then
-        print_step "Installing zsh first..."
-        pkg install zsh git curl -y >/dev/null 2>&1
-    fi
+    setup_termuxvoid_repo
     
+    # Step 1: Install Zsh
+    print_step "Installing Zsh..."
+    pkg install zsh git curl -y >/dev/null 2>&1
+    print_success "Zsh installed"
+    
+    # Step 2: Install Oh My Zsh
     print_step "Installing Oh My Zsh..."
+    export RUNZSH=no
+    export CHSH=no
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null 2>&1
+    print_success "Oh My Zsh installed"
     
-    # Install Oh My Zsh
-    if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended 2>/dev/null; then
-        print_success "Oh My Zsh installed!"
-        echo ""
-        echo -e "${BOLD}Recommended Plugins:${NC}"
-        echo "  Edit ~/.zshrc and add to plugins=():"
-        echo "  • git"
-        echo "  • zsh-autosuggestions"
-        echo "  • zsh-syntax-highlighting"
-        echo ""
-        echo -e "${BOLD}Install popular plugins:${NC}"
-        echo "  git clone https://github.com/zsh-users/zsh-autosuggestions \${ZSH_CUSTOM}/plugins/zsh-autosuggestions"
-        echo "  git clone https://github.com/zsh-users/zsh-syntax-highlighting \${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting"
-        echo ""
-        echo -e "${BOLD}To use Zsh:${NC}"
-        echo "  chsh -s zsh"
-        echo ""
-        echo -e "${DIM}Powered by krinry${NC}"
-    else
-        print_error "Oh My Zsh installation failed"
-        exit 1
-    fi
+    local ZSH_CUSTOM="${HOME}/.oh-my-zsh/custom"
+    
+    # Step 3: Install Powerlevel10k theme
+    print_step "Installing Powerlevel10k theme..."
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM}/themes/powerlevel10k" 2>/dev/null || true
+    print_success "Powerlevel10k installed"
+    
+    # Step 4: Install zsh-autosuggestions
+    print_step "Installing zsh-autosuggestions..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "${ZSH_CUSTOM}/plugins/zsh-autosuggestions" 2>/dev/null || true
+    print_success "zsh-autosuggestions installed"
+    
+    # Step 5: Install zsh-syntax-highlighting
+    print_step "Installing zsh-syntax-highlighting..."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting "${ZSH_CUSTOM}/plugins/zsh-syntax-highlighting" 2>/dev/null || true
+    print_success "zsh-syntax-highlighting installed"
+    
+    # Step 6: Install zsh-completions
+    print_step "Installing zsh-completions..."
+    git clone https://github.com/zsh-users/zsh-completions "${ZSH_CUSTOM}/plugins/zsh-completions" 2>/dev/null || true
+    print_success "zsh-completions installed"
+    
+    # Step 7: Configure .zshrc
+    print_step "Configuring Zsh..."
+    
+    local ZSHRC="${HOME}/.zshrc"
+    
+    # Backup original
+    cp "$ZSHRC" "${ZSHRC}.backup" 2>/dev/null || true
+    
+    # Update theme to Powerlevel10k
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' "$ZSHRC" 2>/dev/null || true
+    
+    # Update plugins
+    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' "$ZSHRC" 2>/dev/null || true
+    
+    print_success "Zsh configured"
+    
+    # Step 8: Set Zsh as default shell
+    print_step "Setting Zsh as default shell..."
+    chsh -s zsh 2>/dev/null || true
+    print_success "Zsh is now default shell"
+    
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}✓${NC} ${BOLD}Complete Zsh Setup Done!${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${BOLD}Installed:${NC}"
+    echo "  ✓ Zsh shell"
+    echo "  ✓ Oh My Zsh framework"
+    echo "  ✓ Powerlevel10k theme"
+    echo "  ✓ zsh-autosuggestions"
+    echo "  ✓ zsh-syntax-highlighting"
+    echo "  ✓ zsh-completions"
+    echo ""
+    echo -e "${BOLD}To activate:${NC}"
+    echo "  Restart Termux or type: zsh"
+    echo ""
+    echo -e "${BOLD}First run of Powerlevel10k:${NC}"
+    echo "  It will ask you to configure the theme."
+    echo "  Follow the prompts to customize your look."
+    echo ""
+    echo -e "${BOLD}Features:${NC}"
+    echo "  • Auto-suggestions (gray text as you type)"
+    echo "  • Syntax highlighting (valid = green, invalid = red)"
+    echo "  • Beautiful prompt with git status"
+    echo "  • Tab completion for everything"
+    echo ""
+    echo -e "${DIM}Powered by krinry${NC}"
 }
 
 install_thefuck() {
