@@ -209,10 +209,33 @@ echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━
 echo -e "${GREEN}✓${NC} ${BOLD}krinry installed successfully!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
+
+# Ask about shell-tools for Termux
+if is_termux; then
+    echo -e "${BOLD}${CYAN}Recommended: Shell Enhancement Tools${NC}"
+    echo "  • Fish shell with auto-suggestions"
+    echo "  • TheFuck - fixes wrong commands"
+    echo "  • Fzf - fuzzy finder"
+    echo ""
+    read -p "Install shell-tools? (y/n): " -n 1 -r
+    echo ""
+    
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        source "$INSTALL_DIR/lib/core.sh"
+        source "$INSTALL_DIR/lib/install.sh"
+        install_shell_tools
+    else
+        echo ""
+        print_info "Skipped. Install later with: krinry install shell-tools"
+    fi
+    echo ""
+fi
+
 echo "Quick start:"
 echo "  krinry --help              Show all commands"
-echo "  krinry flutter install     Install Flutter SDK"
-echo "  krinry flutter doctor      Check your setup"
+echo "  krinry install flutter     Install Flutter SDK"
+echo "  krinry install shell-tools Install auto-suggestions"
 echo ""
 echo "In a Flutter project:"
 echo "  krinry flutter init            Setup cloud build"
